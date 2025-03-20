@@ -31,7 +31,6 @@ typedef enum {
     ERR_UNEXPECTED_CHARACTER,
     ERR_INVALID_LITERAL,
     ERR_UNTERMINATED_JSON
-
 } ErrorCode;
 
 typedef struct {
@@ -52,20 +51,20 @@ typedef struct {
         size_t column;
 } TokenizerCtx;
 
-bool is_whitespace(const char c);
-char peek(const TokenizerCtx *ctx, size_t offset);
-void advance(TokenizerCtx *ctx);
-const char *get_error_message(const ErrorCode error);
-void print_error_context(const Token *token, const char *input,
-                         size_t input_length);
-bool is_valid_utf8_sequence(const char *input, size_t input_size,
-                            size_t *length);
-Token create_simple_token(TokenType type, TokenizerCtx *ctx);
-Token create_invalid_token(const TokenizerCtx *ctx, ErrorCode error);
+static bool is_whitespace(const char c);
+static char peek(const TokenizerCtx *ctx, size_t offset);
+static void advance(TokenizerCtx *ctx);
+static const char *get_error_message(const ErrorCode error);
+static void print_error_context(const Token *token, const char *input,
+                                size_t input_length);
+static bool is_valid_utf8_sequence(const char *input, size_t input_size,
+                                   size_t *length);
 
-Token extract_string(TokenizerCtx *ctx);
-Token extract_number(TokenizerCtx *ctx);
-Token extract_literal(TokenizerCtx *ctx, const char *literal, size_t len,
-                      TokenType type);
+static Token create_simple_token(TokenType type, TokenizerCtx *ctx);
+static Token create_invalid_token(const TokenizerCtx *ctx, ErrorCode error);
+static Token extract_string(TokenizerCtx *ctx);
+static Token extract_number(TokenizerCtx *ctx);
+static Token extract_literal(TokenizerCtx *ctx, const char *literal, size_t len,
+                             TokenType type);
 
 Token next_token(TokenizerCtx *ctx);
