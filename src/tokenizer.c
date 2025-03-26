@@ -18,7 +18,7 @@ static char peek(const TokenizerCtx *ctx, size_t offset) {
     return ctx->input[ctx->pos + offset];
 }
 
-static void advance_position(TokenizerCtx *ctx) {
+static void advance(TokenizerCtx *ctx) {
     if (ctx->pos >= ctx->input_length) {
         return;
     }
@@ -153,7 +153,7 @@ static bool is_valid_utf8_sequence(const char *input, size_t input_size,
 }
 
 static Token create_simple_token(TokenType type, TokenizerCtx *ctx) {
-    advance_position(ctx);
+    advance(ctx);
     return (Token){type,      ctx->input + ctx->pos - 1, 1,
                    ctx->line, ctx->column - 1,           ERR_NONE,
                    NULL};
@@ -180,31 +180,31 @@ static Token extract_string(TokenizerCtx *ctx) {
     if (peek(ctx, 0) != '"') {
         return create_invalid_token(ctx, ERR_UNEXPECTED_CHARACTER);
     }
-    advance_position(ctx);
+    advance(ctx);
 
     while (peek(ctx, 0) != '\0') {
         char c = peek(ctx, 0);
         if (c == '"') {
-            advance_position(ctx);
+            advance(ctx);
             return (Token){
                 TOKEN_STRING, ctx->input + start_pos, ctx->pos - start_pos,
                 start_line,   start_column,           ERR_NONE,
                 NULL};
         }
         if (c == '\\') {
-            advance_position(ctx);
+            advance(ctx);
             char escaped = peek(ctx, 0);
             static const char valid_escapes[] = "\"\\/bfnrt";
             if (strchr(valid_escapes, escaped)) {
-                advance_position(ctx);
+                advance(ctx);
             } else if (escaped == 'u') {
-                advance_position(ctx);
+                advance(ctx);
                 for (size_t i = 0; i < 4; i++) {
                     if (!isxdigit(peek(ctx, 0))) {
                         return create_invalid_token(ctx,
                                                     ERR_INVALID_UNICODE_ESCAPE);
                     }
-                    advance_position(ctx);
+                    advance(ctx);
                 }
             } else {
                 return create_invalid_token(ctx, ERR_INVALID_ESCAPE_SEQUENCE);
@@ -223,7 +223,7 @@ static Token extract_string(TokenizerCtx *ctx) {
         } else if (c < 32) {
             return create_invalid_token(ctx, ERR_CONTROL_CHARACTER_IN_STRING);
         } else {
-            advance_position(ctx);
+            advance(ctx);
         }
     }
 
@@ -237,11 +237,11 @@ static Token extract_number(TokenizerCtx *ctx) {
     bool has_integer_part = false;
 
     if (peek(ctx, 0) == '-') {
-        advance_position(ctx);
+        advance(ctx);
     }
 
     if (peek(ctx, 0) == '0') {
-        advance_position(ctx);
+        advance(ctx);
         if (peek(ctx, 0) != '.' && isdigit(peek(ctx, 0))) {
             return create_invalid_token(ctx, ERR_INVALID_NUMBER_FORMAT);
         }
@@ -251,30 +251,30 @@ static Token extract_number(TokenizerCtx *ctx) {
         }
         has_integer_part = true;
         while (isdigit(peek(ctx, 0))) {
-            advance_position(ctx);
+            advance(ctx);
         }
     }
 
     if (peek(ctx, 0) == '.') {
-        advance_position(ctx);
+        advance(ctx);
         if (!isdigit(peek(ctx, 0))) {
             return create_invalid_token(ctx, ERR_TRAILING_DECIMAL_POINT);
         }
         while (isdigit(peek(ctx, 0))) {
-            advance_position(ctx);
+            advance(ctx);
         }
     }
 
     if (peek(ctx, 0) == 'e' || peek(ctx, 0) == 'E') {
-        advance_position(ctx);
+        advance(ctx);
         if (peek(ctx, 0) == '+' || peek(ctx, 0) == '-') {
-            advance_position(ctx);
+            advance(ctx);
         }
         if (!isdigit(peek(ctx, 0))) {
             return create_invalid_token(ctx, ERR_INCOMPLETE_EXPONENT);
         }
         while (isdigit(peek(ctx, 0))) {
-            advance_position(ctx);
+            advance(ctx);
         }
     }
 
@@ -294,7 +294,7 @@ static Token extract_literal(TokenizerCtx *ctx, const char *literal, size_t len,
 
     if (strncmp(ctx->input + ctx->pos, literal, len) == 0) {
         for (size_t i = 0; i < len; i++) {
-            advance_position(ctx);
+            advance(ctx);
         }
 
         char next = peek(ctx, 0);
@@ -312,7 +312,7 @@ static Token extract_literal(TokenizerCtx *ctx, const char *literal, size_t len,
 
 Token next_token(TokenizerCtx *ctx) {
     while (is_whitespace(peek(ctx, 0))) {
-        advance_position(ctx);
+        advance(ctx);
     }
 
     char current = peek(ctx, 0);
