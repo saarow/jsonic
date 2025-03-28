@@ -5,10 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define LITERAL_TRUE_LENGTH 4
-#define LITERAL_FALSE_LENGTH 5
-#define LITERAL_NULL_LENGTH 4
-
 static bool is_whitespace(const char c) { return isspace((unsigned char)c); }
 
 static char peek(const TokenizerCtx *ctx, size_t offset) {
@@ -31,7 +27,7 @@ static void advance(TokenizerCtx *ctx) {
         ctx->line++;
         ctx->column = 0;
         if (peek(ctx, 1) == '\n') {
-            ctx->pos++; // Skip the '\n' after '\r'
+            ctx->pos++;
         }
     } else {
         ctx->column++;
@@ -348,20 +344,14 @@ Token next_token(TokenizerCtx *ctx) {
     }
 
     if (isalpha(current)) {
-        if (current == 't' &&
-            strncmp(ctx->input + ctx->pos, "true", LITERAL_TRUE_LENGTH) == 0) {
-            return extract_literal(ctx, "true", LITERAL_TRUE_LENGTH,
-                                   TOKEN_TRUE);
+        if (current == 't' && strncmp(ctx->input + ctx->pos, "true", 4) == 0) {
+            return extract_literal(ctx, "true", 4, TOKEN_TRUE);
         }
-        if (current == 'f' && strncmp(ctx->input + ctx->pos, "false",
-                                      LITERAL_FALSE_LENGTH) == 0) {
-            return extract_literal(ctx, "false", LITERAL_FALSE_LENGTH,
-                                   TOKEN_FALSE);
+        if (current == 'f' && strncmp(ctx->input + ctx->pos, "false", 5) == 0) {
+            return extract_literal(ctx, "false", 5, TOKEN_FALSE);
         }
-        if (current == 'n' &&
-            strncmp(ctx->input + ctx->pos, "null", LITERAL_NULL_LENGTH) == 0) {
-            return extract_literal(ctx, "null", LITERAL_NULL_LENGTH,
-                                   TOKEN_NULL);
+        if (current == 'n' && strncmp(ctx->input + ctx->pos, "null", 4) == 0) {
+            return extract_literal(ctx, "null", 4, TOKEN_NULL);
         }
     }
 
