@@ -187,7 +187,7 @@ void test_nested_json(void) {
 
 void test_utf8_characters(void) {
     const char *json =
-        "{\"utf8-emoji\": \"😊\", \"utf8-chinese\": \"こんにちは\"}";
+        "{\"utf8-emoji\": \"😊\", \"utf8-japanese\": \"こんにちは\"}";
     TokenizerCtx ctx = create_ctx(json, strlen(json));
 
     Token token = next_token(&ctx);
@@ -206,19 +206,19 @@ void test_utf8_characters(void) {
     assert_token(token, TOKEN_COMMA, ",", 1, 1, 22, ERR_NONE);
 
     token = next_token(&ctx);
-    assert_token(token, TOKEN_STRING, "\"utf8-chinese\"", 14, 1, 24, ERR_NONE);
+    assert_token(token, TOKEN_STRING, "\"utf8-japanese\"", 15, 1, 24, ERR_NONE);
 
     token = next_token(&ctx);
-    assert_token(token, TOKEN_COLON, ":", 1, 1, 38, ERR_NONE);
+    assert_token(token, TOKEN_COLON, ":", 1, 1, 39, ERR_NONE);
 
     token = next_token(&ctx);
-    assert_token(token, TOKEN_STRING, "\"こんにちは\"", 17, 1, 40, ERR_NONE);
+    assert_token(token, TOKEN_STRING, "\"こんにちは\"", 17, 1, 41, ERR_NONE);
 
     token = next_token(&ctx);
-    assert_token(token, TOKEN_RIGHT_BRACE, "}", 1, 1, 57, ERR_NONE);
+    assert_token(token, TOKEN_RIGHT_BRACE, "}", 1, 1, 58, ERR_NONE);
 
     token = next_token(&ctx);
-    assert_token(token, TOKEN_EOF, NULL, 0, 1, 58, ERR_NONE);
+    assert_token(token, TOKEN_EOF, NULL, 0, 1, 59, ERR_NONE);
 }
 
 int main(void) {
