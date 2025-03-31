@@ -119,6 +119,25 @@ void test_number_tokens(void) {
                  ERR_INVALID_NUMBER_FORMAT);
 }
 
+void test_invalid_numbers(void) {
+    const char *input = "007";
+    TokenizerCtx ctx = create_ctx(input, strlen(input));
+    Token token = next_token(&ctx);
+    assert_token(token, TOKEN_INVALID, NULL, 0, 1, 2,
+                 ERR_INVALID_NUMBER_FORMAT);
+
+    const char *input2 = "1e+";
+    TokenizerCtx ctx2 = create_ctx(input2, strlen(input2));
+    Token token2 = next_token(&ctx2);
+    assert_token(token2, TOKEN_INVALID, NULL, 0, 1, 4, ERR_INCOMPLETE_EXPONENT);
+
+    const char *input3 = ".123";
+    TokenizerCtx ctx3 = create_ctx(input3, strlen(input3));
+    Token token3 = next_token(&ctx3);
+    assert_token(token3, TOKEN_INVALID, NULL, 0, 1, 1,
+                 ERR_UNEXPECTED_CHARACTER);
+}
+
 void test_nested_json(void) {
     const char *json = "{\"a\":{\"b\":{\"c\":123}}}";
     TokenizerCtx ctx = create_ctx(json, strlen(json));
@@ -196,6 +215,7 @@ int main(void) {
     RUN_TEST(test_unexpected_character);
     RUN_TEST(test_string_tokens);
     RUN_TEST(test_number_tokens);
+    RUN_TEST(test_invalid_numbers);
     RUN_TEST(test_nested_json);
     RUN_TEST(test_utf8_characters);
 
