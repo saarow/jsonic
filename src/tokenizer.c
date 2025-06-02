@@ -23,7 +23,11 @@ static void advance(TokenizerCtx *ctx) {
     if (c == '\n') {
         ctx->line++;
         ctx->column = 0;
-    } else if (c == '\r' || peek(ctx, 1) == '\n') {
+    } else if (c == '\r') {
+        if (ctx->pos + 1 < ctx->input_length &&
+            ctx->input[ctx->pos + 1] == '\n') {
+            ctx->pos++;
+        }
         ctx->line++;
         ctx->column = 0;
     } else {
@@ -70,6 +74,10 @@ static Token extract_string(TokenizerCtx *ctx) {
 
     while (peek(ctx, 0) != '\0') {
         char c = peek(ctx, 0);
+        if (c < 0x20) { // Control characters invalid unless escaped
+            return create_invalid_token(ctx);
+        }
+
         if (c == '"') {
             advance(ctx);
             return (Token){
@@ -95,6 +103,7 @@ static Token extract_string(TokenizerCtx *ctx) {
                     }
                     advance(ctx);
                 }
+                // TODO: Validate UTF-8
             } else {
                 return create_invalid_token(ctx);
             }

@@ -181,6 +181,11 @@ void test_invalid_numbers(void) {
     TokenizerCtx ctx3 = create_ctx(input3, strlen(input3));
     Token token3 = next_token(&ctx3);
     assert_token(token3, TOKEN_INVALID, NULL, 0, 1, 1);
+
+    const char *input4 = "1.";
+    TokenizerCtx ctx4 = create_ctx(input4, strlen(input4));
+    Token token4 = next_token(&ctx4);
+    assert_token(token4, TOKEN_INVALID, NULL, 0, 1, 3);
 }
 
 int main(void) {
