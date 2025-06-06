@@ -17,11 +17,7 @@ typedef enum {
     TOKEN_NULL,
     TOKEN_EOF,
     TOKEN_INVALID
-} TokenType;
-
-typedef enum {
-    TOKEN_ERR_NONE,
-} TokenErr;
+} JsonTokenType;
 
 typedef struct {
         const char *input;
@@ -29,26 +25,15 @@ typedef struct {
         size_t pos;
         size_t line;
         size_t column;
-} TokenizerCtx;
+} JsonTokenizerCtx;
 
 typedef struct {
-        TokenType type;
+        JsonTokenType type;
         const char *start;
         size_t length;
         size_t line;
         size_t column;
-} Token;
+} JsonToken;
 
-static bool is_whitespace(const char c);
-static char peek(const TokenizerCtx *ctx, size_t offset);
-static void advance(TokenizerCtx *ctx);
-
-static Token create_simple_token(TokenType type, TokenizerCtx *ctx);
-static Token create_invalid_token(TokenizerCtx *ctx);
-
-static Token extract_string(TokenizerCtx *ctx);
-static Token extract_number(TokenizerCtx *ctx);
-static Token extract_literal(TokenizerCtx *ctx, const char *literal, size_t len,
-                             TokenType type);
-
-Token next_token(TokenizerCtx *ctx);
+JsonTokenizerCtx json_tokenizer_init(const char *json_input, size_t length);
+JsonToken json_tokenizer_next(JsonTokenizerCtx *ctx);
