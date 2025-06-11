@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../include/tokenizer.h"
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -15,15 +16,15 @@ typedef enum {
 typedef struct JsonValue JsonValue;
 
 typedef struct {
-        JsonValue **values;
-        size_t size;
-} JsonArray;
-
-typedef struct {
         char **keys;
         JsonValue **values;
         size_t size;
 } JsonObject;
+
+typedef struct {
+        JsonValue **values;
+        size_t size;
+} JsonArray;
 
 struct JsonValue {
         JsonType type;
@@ -35,3 +36,5 @@ struct JsonValue {
                 JsonObject object;
         };
 };
+
+JsonObject *json_parse(const char *input, size_t input_length);
