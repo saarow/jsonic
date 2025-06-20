@@ -34,7 +34,9 @@ struct JsonValue {
                 bool boolean;
                 JsonArray array;
                 JsonObject object;
+                void *null;
         };
 };
 
 JsonObject *json_parse(const char *input, size_t input_length);
+void free_json_value(JsonValue *value);
