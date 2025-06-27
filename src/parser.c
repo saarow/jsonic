@@ -2,7 +2,6 @@
 #include "../include/tokenizer.h"
 #include <errno.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -98,144 +97,96 @@ static JsonArray *extract_json_array(JsonTokenizerCtx *ctx) {
         JsonValue **new_values =
             realloc(array->values, sizeof(JsonValue *) * (array->size + 1));
         if (!new_values) {
-            for (size_t i = 0; i < array->size; i++) {
-                free_json_value(array->values[i]);
-            }
-            free(array->values);
-            free(array);
-            return NULL;
+            goto error_cleanup;
         }
         array->values = new_values;
 
         array->values[array->size] = malloc(sizeof(JsonValue));
         if (!array->values[array->size]) {
-            for (size_t i = 0; i < array->size; i++) {
-                free_json_value(array->values[i]);
-            }
-            free(array->values);
-            free(array);
-            return NULL;
+            goto error_cleanup;
         }
 
         switch (token.type) {
         case TOKEN_STRING: {
-            array->values =
-                realloc(array->values, sizeof(JsonValue) * (array->size + 1));
-            if (!array->values) {
-                return NULL;
-            }
-
             array->values[array->size]->type = JSON_STRING;
             array->values[array->size]->string = extract_json_string(&token);
-            printf("%s\n", array->values[array->size]->string);
-            array->size++;
-
-            token = json_tokenizer_next(ctx);
+            if (!array->values[array->size]->string) {
+                goto error_cleanup;
+            }
             break;
         }
 
         case TOKEN_NUMBER: {
-            array->values =
-                realloc(array->values, sizeof(JsonValue) * (array->size + 1));
-            if (!array->values) {
-                return NULL;
+            double *num_ptr = extract_json_number(&token);
+            if (!num_ptr) {
+                goto error_cleanup;
             }
 
             array->values[array->size]->type = JSON_NUMBER;
-            array->values[array->size]->number = *extract_json_number(&token);
-            printf("%f\n", array->values[array->size]->number);
-            array->size++;
-
-            token = json_tokenizer_next(ctx);
+            array->values[array->size]->number = *num_ptr;
             break;
         }
 
         case TOKEN_LEFT_BRACE: {
-            // BUG!
-            array->values =
-                realloc(array->values, sizeof(JsonValue) * (array->size + 1));
-            if (!array->values) {
-                return NULL;
+            JsonObject *obj = extract_json_object(ctx);
+            if (!obj) {
+                goto error_cleanup;
             }
 
             array->values[array->size]->type = JSON_OBJECT;
-            array->values[array->size]->object = *extract_json_object(ctx);
-            array->size++;
-
-            token = json_tokenizer_next(ctx);
+            array->values[array->size]->object = *obj;
             break;
         }
 
         case TOKEN_LEFT_BRACKET: {
-            // BUG!
-            array->values =
-                realloc(array->values, sizeof(JsonValue *) * (array->size + 1));
-            if (!array->values) {
-                return NULL;
+            JsonArray *arr = extract_json_array(ctx);
+            if (!arr) {
+                goto error_cleanup;
             }
 
+            array->values[array->size]->type = JSON_ARRAY;
+            array->values[array->size]->array = *arr;
             break;
         }
 
-        case TOKEN_TRUE: {
-            array->values =
-                realloc(array->values, sizeof(JsonValue) * (array->size + 1));
-            if (!array->values) {
-                return NULL;
-            }
-
+        case TOKEN_TRUE:
             array->values[array->size]->type = JSON_BOOL;
             array->values[array->size]->boolean = true;
-            printf("%d\n", array->values[array->size]->boolean);
-            array->size++;
-
-            token = json_tokenizer_next(ctx);
             break;
-        }
 
-        case TOKEN_FALSE: {
-            array->values =
-                realloc(array->values, sizeof(JsonValue) * (array->size + 1));
-            if (!array->values) {
-                return NULL;
-            }
-
+        case TOKEN_FALSE:
             array->values[array->size]->type = JSON_BOOL;
             array->values[array->size]->boolean = false;
-            printf("%d\n", array->values[array->size]->boolean);
-            array->size++;
-
-            token = json_tokenizer_next(ctx);
             break;
-        }
 
-        case TOKEN_NULL: {
-            array->values =
-                realloc(array->values, sizeof(JsonValue) * (array->size + 1));
-            if (!array->values) {
-                return NULL;
-            }
-
+        case TOKEN_NULL:
             array->values[array->size]->type = JSON_NULL;
             array->values[array->size]->null = NULL;
-
-            printf("%p\n", array->values[array->size]->null);
-            array->size++;
-
-            token = json_tokenizer_next(ctx);
             break;
-        }
 
         case TOKEN_COMMA:
             token = json_tokenizer_next(ctx);
-            break;
+            continue;
 
         default:
-            break;
+            goto error_cleanup;
         }
+
+        array->size++;
+        token = json_tokenizer_next(ctx);
     }
 
     return array;
+
+error_cleanup:
+    if (array) {
+        for (size_t i = 0; i < array->size; i++) {
+            free_json_value(array->values[i]);
+        }
+        free(array->values);
+        free(array);
+    }
+    return NULL;
 }
 
 static JsonObject *extract_json_object(JsonTokenizerCtx *ctx) {
@@ -254,17 +205,22 @@ static JsonObject *extract_json_object(JsonTokenizerCtx *ctx) {
 }
 
 void free_json_value(JsonValue *value) {
-    // potential BUG!
+    if (!value) {
+        return;
+    }
+
     switch (value->type) {
     case JSON_STRING:
         free(value->string);
         break;
+
     case JSON_ARRAY:
         for (size_t i = 0; i < value->array.size; i++) {
             free_json_value(value->array.values[i]);
         }
         free(value->array.values);
         break;
+
     case JSON_OBJECT:
         for (size_t i = 0; i < value->object.size; i++) {
             free(value->object.keys[i]);
@@ -272,6 +228,7 @@ void free_json_value(JsonValue *value) {
         }
         free(value->object.keys);
         free(value->object.values);
+
     case JSON_NUMBER:
     case JSON_BOOL:
     case JSON_NULL:
