@@ -1,6 +1,7 @@
 #include "../include/parser.h"
 #include "../include/tokenizer.h"
 #include <errno.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,7 +9,7 @@
 static char *extract_json_string(JsonToken *token);
 static double *extract_json_number(JsonToken *token);
 static JsonValue *extract_json_value(JsonToken *token);
-static JsonArray *extract_json_array(JsonTokenizerCtx *ctx);
+static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested);
 static JsonObject *extract_json_object(JsonTokenizerCtx *ctx);
 
 JsonObject *json_parse(const char *input, size_t input_length) {
@@ -79,12 +80,17 @@ static double *extract_json_number(JsonToken *token) {
     return number_ptr;
 }
 
-static JsonArray *extract_json_array(JsonTokenizerCtx *ctx) {
-    JsonToken token = json_tokenizer_next(ctx);
-    if (token.type != TOKEN_LEFT_BRACKET) {
-        return NULL;
+static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested) {
+    JsonToken token;
+    if (!is_nested) {
+        token = json_tokenizer_next(ctx);
+        if (token.type != TOKEN_LEFT_BRACKET) {
+            return NULL;
+        }
+        token = json_tokenizer_next(ctx);
+    } else {
+        token = json_tokenizer_next(ctx);
     }
-    token = json_tokenizer_next(ctx);
 
     JsonArray *array = malloc(sizeof(JsonArray));
     if (!array) {
@@ -139,7 +145,7 @@ static JsonArray *extract_json_array(JsonTokenizerCtx *ctx) {
         }
 
         case TOKEN_LEFT_BRACKET: {
-            JsonArray *arr = extract_json_array(ctx);
+            JsonArray *arr = extract_json_array(ctx, true);
             if (!arr) {
                 goto error_cleanup;
             }
