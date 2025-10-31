@@ -10,7 +10,7 @@ static char *extract_json_string(JsonToken *token);
 static double *extract_json_number(JsonToken *token);
 static JsonValue *extract_json_value(JsonToken *token);
 static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested);
-static JsonObject *extract_json_object(JsonTokenizerCtx *ctx);
+static JsonObject *extract_json_object(JsonTokenizerCtx *ctx, bool is_nested);
 
 JsonObject *json_parse(const char *input, size_t input_length) {
     // TODO: completing it
@@ -134,7 +134,7 @@ static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested) {
         }
 
         case TOKEN_LEFT_BRACE: {
-            JsonObject *obj = extract_json_object(ctx);
+            JsonObject *obj = extract_json_object(ctx, true);
             if (!obj) {
                 goto error_cleanup;
             }
@@ -195,10 +195,16 @@ error_cleanup:
     return NULL;
 }
 
-static JsonObject *extract_json_object(JsonTokenizerCtx *ctx) {
-    // TODO: completing it
-    if (ctx->input[ctx->pos] != '{') {
-        return NULL;
+static JsonObject *extract_json_object(JsonTokenizerCtx *ctx, bool is_nested) {
+    JsonToken token;
+    if (!is_nested) {
+        token = json_tokenizer_next(ctx);
+        if (token.type != TOKEN_LEFT_BRACE) {
+            return NULL;
+        }
+        token = json_tokenizer_next(ctx);
+    } else {
+        token = json_tokenizer_next(ctx);
     }
 
     JsonObject *object = malloc(sizeof(JsonObject));
@@ -206,8 +212,118 @@ static JsonObject *extract_json_object(JsonTokenizerCtx *ctx) {
         return NULL;
     }
     object->size = 0;
+    object->keys = NULL;
+    object->values = NULL;
+
+    while (token.type != TOKEN_RIGHT_BRACE) {
+        char **new_keys =
+            realloc(object->keys, sizeof(char *) * (object->size + 1));
+        JsonValue **new_values =
+            realloc(object->values, sizeof(JsonValue *) * (object->size + 1));
+        if (!new_keys && !new_values) {
+            goto error_cleanup;
+        }
+        object->keys = new_keys;
+        object->values = new_values;
+
+        object->keys[object->size] = malloc(sizeof(char *));
+        object->values[object->size] = malloc(sizeof(JsonValue));
+        if (!object->keys[object->size] && object->values[object->size]) {
+            goto error_cleanup;
+        }
+
+        if (token.type != TOKEN_STRING) {
+            goto error_cleanup;
+        }
+        object->keys[object->size] = extract_json_string(&token);
+
+        json_tokenizer_next(ctx);
+        if (token.type != TOKEN_COLON) {
+            goto error_cleanup;
+        }
+        json_tokenizer_next(ctx);
+
+        switch (token.type) {
+        case TOKEN_STRING: {
+            object->values[object->size]->type = JSON_STRING;
+            object->values[object->size]->string = extract_json_string(&token);
+            if (!object->values[object->size]->string) {
+                goto error_cleanup;
+            }
+            break;
+        }
+
+        case TOKEN_NUMBER: {
+            double *num_ptr = extract_json_number(&token);
+            if (!num_ptr) {
+                goto error_cleanup;
+            }
+
+            object->values[object->size]->type = JSON_NUMBER;
+            object->values[object->size]->number = *num_ptr;
+            break;
+        }
+
+        case TOKEN_LEFT_BRACE: {
+            JsonObject *obj = extract_json_object(ctx, true);
+            if (!obj) {
+                goto error_cleanup;
+            }
+
+            object->values[object->size]->type = JSON_OBJECT;
+            object->values[object->size]->object = *obj;
+            break;
+        }
+
+        case TOKEN_LEFT_BRACKET: {
+            JsonArray *arr = extract_json_array(ctx, true);
+            if (!arr) {
+                goto error_cleanup;
+            }
+
+            object->values[object->size]->type = JSON_ARRAY;
+            object->values[object->size]->array = *arr;
+            break;
+        }
+
+        case TOKEN_TRUE:
+            object->values[object->size]->type = JSON_BOOL;
+            object->values[object->size]->boolean = true;
+            break;
+
+        case TOKEN_FALSE:
+            object->values[object->size]->type = JSON_BOOL;
+            object->values[object->size]->boolean = false;
+            break;
+
+        case TOKEN_NULL:
+            object->values[object->size]->type = JSON_NULL;
+            object->values[object->size]->null = NULL;
+            break;
+
+        case TOKEN_COMMA:
+            token = json_tokenizer_next(ctx);
+            continue;
+
+        default:
+            goto error_cleanup;
+        }
+        object->size++;
+        json_tokenizer_next(ctx);
+    }
 
     return object;
+
+error_cleanup:
+    if (object) {
+        for (size_t i = 0; i < object->size; i++) {
+            free(object->keys[i]);
+            free_json_value(object->values[i]);
+        }
+        free(object->keys);
+        free(object->values);
+    }
+    return NULL;
 }
 
 void free_json_value(JsonValue *value) {
