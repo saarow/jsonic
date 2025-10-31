@@ -99,7 +99,7 @@ static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested) {
     array->size = 0;
     array->values = NULL;
 
-    while (token.type != TOKEN_RIGHT_BRACKET) {
+    while (token.type != TOKEN_RIGHT_BRACKET && token.type != TOKEN_EOF) {
         JsonValue **new_values =
             realloc(array->values, sizeof(JsonValue *) * (array->size + 1));
         if (!new_values) {
@@ -127,9 +127,9 @@ static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested) {
             if (!num_ptr) {
                 goto error_cleanup;
             }
-
             array->values[array->size]->type = JSON_NUMBER;
             array->values[array->size]->number = *num_ptr;
+            free(num_ptr);
             break;
         }
 
@@ -138,9 +138,9 @@ static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested) {
             if (!obj) {
                 goto error_cleanup;
             }
-
             array->values[array->size]->type = JSON_OBJECT;
             array->values[array->size]->object = *obj;
+            free(obj);
             break;
         }
 
@@ -149,9 +149,9 @@ static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested) {
             if (!arr) {
                 goto error_cleanup;
             }
-
             array->values[array->size]->type = JSON_ARRAY;
             array->values[array->size]->array = *arr;
+            free(arr);
             break;
         }
 
@@ -171,8 +171,7 @@ static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested) {
             break;
 
         case TOKEN_COMMA:
-            token = json_tokenizer_next(ctx);
-            continue;
+            goto error_cleanup;
 
         default:
             goto error_cleanup;
@@ -180,6 +179,17 @@ static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested) {
 
         array->size++;
         token = json_tokenizer_next(ctx);
+
+        if (token.type == TOKEN_COMMA) {
+            token = json_tokenizer_next(ctx);
+            if (token.type == TOKEN_RIGHT_BRACKET) {
+                goto error_cleanup;
+            }
+        }
+    }
+
+    if (token.type != TOKEN_RIGHT_BRACKET) {
+        goto error_cleanup;
     }
 
     return array;
@@ -220,28 +230,31 @@ static JsonObject *extract_json_object(JsonTokenizerCtx *ctx, bool is_nested) {
             realloc(object->keys, sizeof(char *) * (object->size + 1));
         JsonValue **new_values =
             realloc(object->values, sizeof(JsonValue *) * (object->size + 1));
-        if (!new_keys && !new_values) {
+        if (!new_keys || !new_values) {
             goto error_cleanup;
         }
         object->keys = new_keys;
         object->values = new_values;
 
-        object->keys[object->size] = malloc(sizeof(char *));
-        object->values[object->size] = malloc(sizeof(JsonValue));
-        if (!object->keys[object->size] && object->values[object->size]) {
-            goto error_cleanup;
-        }
-
         if (token.type != TOKEN_STRING) {
             goto error_cleanup;
         }
         object->keys[object->size] = extract_json_string(&token);
+        if (!object->keys[object->size]) {
+            goto error_cleanup;
+        }
 
-        json_tokenizer_next(ctx);
+        token = json_tokenizer_next(ctx);
         if (token.type != TOKEN_COLON) {
             goto error_cleanup;
         }
-        json_tokenizer_next(ctx);
+
+        token = json_tokenizer_next(ctx);
+
+        object->values[object->size] = malloc(sizeof(JsonValue));
+        if (!object->values[object->size]) {
+            goto error_cleanup;
+        }
 
         switch (token.type) {
         case TOKEN_STRING: {
@@ -258,9 +271,9 @@ static JsonObject *extract_json_object(JsonTokenizerCtx *ctx, bool is_nested) {
             if (!num_ptr) {
                 goto error_cleanup;
             }
-
             object->values[object->size]->type = JSON_NUMBER;
             object->values[object->size]->number = *num_ptr;
+            free(num_ptr);
             break;
         }
 
@@ -269,9 +282,9 @@ static JsonObject *extract_json_object(JsonTokenizerCtx *ctx, bool is_nested) {
             if (!obj) {
                 goto error_cleanup;
             }
-
             object->values[object->size]->type = JSON_OBJECT;
             object->values[object->size]->object = *obj;
+            free(obj);
             break;
         }
 
@@ -280,9 +293,9 @@ static JsonObject *extract_json_object(JsonTokenizerCtx *ctx, bool is_nested) {
             if (!arr) {
                 goto error_cleanup;
             }
-
             object->values[object->size]->type = JSON_ARRAY;
             object->values[object->size]->array = *arr;
+            free(arr);
             break;
         }
 
@@ -301,15 +314,15 @@ static JsonObject *extract_json_object(JsonTokenizerCtx *ctx, bool is_nested) {
             object->values[object->size]->null = NULL;
             break;
 
-        case TOKEN_COMMA:
-            token = json_tokenizer_next(ctx);
-            continue;
-
         default:
             goto error_cleanup;
         }
+
         object->size++;
-        json_tokenizer_next(ctx);
+        token = json_tokenizer_next(ctx);
+        if (token.type == TOKEN_COMMA) {
+            token = json_tokenizer_next(ctx);
+        }
     }
 
     return object;
@@ -322,6 +335,7 @@ error_cleanup:
         }
         free(object->keys);
         free(object->values);
+        free(object);
     }
     return NULL;
 }
