@@ -52,6 +52,7 @@ static double *extract_json_number(JsonToken *token) {
     double number = strtod(num_str, &endptr);
 
     if ((errno == ERANGE) || (endptr == num_str)) {
+        free(num_str);
         return NULL;
     }
 
@@ -182,12 +183,17 @@ static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested) {
 
 error_cleanup:
     if (array) {
-        for (size_t i = 0; i < array->size; i++) {
-            free_json_value(array->values[i]);
+        if (array->values) {
+            for (size_t i = 0; i < array->size; i++) {
+                if (array->values[i]) {
+                    free_json_value(array->values[i]);
+                }
+            }
+            free(array->values);
         }
-        free(array->values);
         free(array);
     }
+
     return NULL;
 }
 
@@ -315,12 +321,24 @@ static JsonObject *extract_json_object(JsonTokenizerCtx *ctx, bool is_nested) {
 
 error_cleanup:
     if (object) {
-        for (size_t i = 0; i < object->size; i++) {
-            free(object->keys[i]);
-            free_json_value(object->values[i]);
+        if (object->keys) {
+            for (size_t i = 0; i < object->size; i++) {
+                if (object->keys[i]) {
+                    free(object->keys[i]);
+                }
+            }
+            free(object->keys);
         }
-        free(object->keys);
-        free(object->values);
+
+        if (object->values) {
+            for (size_t i = 0; i < object->size; i++) {
+                if (object->values[i]) {
+                    free_json_value(object->values[i]);
+                }
+            }
+            free(object->values);
+        }
+
         free(object);
     }
     return NULL;
@@ -350,6 +368,7 @@ void free_json_value(JsonValue *value) {
         }
         free(value->object.keys);
         free(value->object.values);
+        break;
 
     case JSON_NUMBER:
     case JSON_BOOL:
