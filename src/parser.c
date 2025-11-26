@@ -127,7 +127,6 @@ static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested) {
             }
             array->values[array->size]->type = JSON_OBJECT;
             array->values[array->size]->object = *obj;
-            free(obj);
             break;
         }
 
@@ -138,7 +137,6 @@ static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested) {
             }
             array->values[array->size]->type = JSON_ARRAY;
             array->values[array->size]->array = *arr;
-            free(arr);
             break;
         }
 
@@ -276,7 +274,6 @@ static JsonObject *extract_json_object(JsonTokenizerCtx *ctx, bool is_nested) {
             }
             object->values[object->size]->type = JSON_OBJECT;
             object->values[object->size]->object = *obj;
-            free(obj);
             break;
         }
 
@@ -287,7 +284,6 @@ static JsonObject *extract_json_object(JsonTokenizerCtx *ctx, bool is_nested) {
             }
             object->values[object->size]->type = JSON_ARRAY;
             object->values[object->size]->array = *arr;
-            free(arr);
             break;
         }
 
