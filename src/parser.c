@@ -13,30 +13,16 @@ static JsonArray *extract_json_array(JsonTokenizerCtx *ctx, bool is_nested);
 static JsonObject *extract_json_object(JsonTokenizerCtx *ctx, bool is_nested);
 
 JsonObject *json_parse(const char *input, size_t input_length) {
-    // TODO: completing it
-    JsonObject *object = malloc(sizeof(JsonObject));
-    if (!object) {
-        return NULL;
-    }
-    object->size = 0;
-
     JsonTokenizerCtx ctx = json_tokenizer_init(input, input_length);
-    JsonToken token = json_tokenizer_next(&ctx);
 
-    while (0) {
-        switch (token.type) {
-        case TOKEN_STRING:
-        case TOKEN_NUMBER:
-        case TOKEN_LEFT_BRACE:
-        case TOKEN_LEFT_BRACKET:
-        case TOKEN_TRUE:
-        case TOKEN_FALSE:
-        case TOKEN_NULL:
-        default:
+    JsonObject *object = extract_json_object(&ctx, false);
+
+    if (object) {
+        JsonToken token = json_tokenizer_next(&ctx);
+        if (token.type != TOKEN_EOF) {
+            free_json_value((JsonValue *)object);
             return NULL;
         }
-
-        token = json_tokenizer_next(&ctx);
     }
 
     return object;
