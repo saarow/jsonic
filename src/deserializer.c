@@ -46,7 +46,19 @@ bool json_to_struct(void *struct_ptr, const JsonObject *json,
             int *int_ptr = (int *)field_ptr;
             *int_ptr = (int)value->number;
             break;
-
+        case FIELD_DOUBLE:
+            if (value->type != JSON_NUMBER) {
+                if (error) {
+                    error->key = field->key;
+                    snprintf(error->message, sizeof(error->message),
+                             "Expected number for key '%s', got %d", field->key,
+                             value->type);
+                }
+                return false;
+            }
+            double *double_ptr = (double *)field_ptr;
+            *double_ptr = (double)value->number;
+            break;
         case FIELD_STRING:
             if (value->type != JSON_STRING) {
                 if (error) {
@@ -70,7 +82,21 @@ bool json_to_struct(void *struct_ptr, const JsonObject *json,
                 return false;
             }
             break;
+        case FIELD_BOOL: {
+            if (value->type != JSON_BOOL) {
+                if (error) {
+                    error->key = field->key;
+                    snprintf(error->message, sizeof(error->message),
+                             "Expected boolean for key '%s', got %d",
+                             field->key, value->type);
+                }
+                return false;
+            }
 
+            bool *bool_ptr = (bool *)field_ptr;
+            *bool_ptr = value->boolean;
+            break;
+        }
         default:
             if (error) {
                 error->key = field->key;
@@ -102,6 +128,10 @@ void json_free_struct(void *struct_ptr, const FieldDescriptor *fields,
             break;
         }
         case FIELD_INT:
+            break;
+        case FIELD_DOUBLE:
+            break;
+        case FIELD_BOOL:
             break;
         }
     }

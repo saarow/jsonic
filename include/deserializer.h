@@ -5,7 +5,9 @@
 
 typedef enum {
     FIELD_INT,
+    FIELD_DOUBLE,
     FIELD_STRING,
+    FIELD_BOOL,
 } FieldType;
 
 typedef struct {
